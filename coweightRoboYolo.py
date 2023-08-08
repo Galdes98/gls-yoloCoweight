@@ -7,14 +7,14 @@ project = rf.workspace().project("coweight")
 model = project.version(2).model
 
 # infer on a local image
-modelJson = model.predict("BLF2119_24.jpg").json()
+modelJson = model.predict("BLF2119_15.jpg").json()
 #print(modelJson)
 
 # infer on an image hosted elsewhere
 #print(model.predict("URL_OF_YOUR_IMAGE").json())
 
 # save an image annotated with your predictions
-model.predict("BLF2119_24.jpg").save("prediction_profile.jpg")
+model.predict("BLF2119_15.jpg").save("prediction_profile.jpg")
 
 im = Image.open("prediction_profile.jpg")
 # Get the metadata of the image
@@ -35,7 +35,7 @@ resolution = metadata.get('dpi')
 #print(modelJson['predictions'][0])
 
 # Set the color and size of the points
-point_color = (255, 255, 0)  # Black color
+point_color = (255, 255, 0)  # Yellow color
 point_size = 2
 
 # Set the fill color for the polygons
@@ -65,34 +65,26 @@ ImageDraw.Draw(mask).polygon(polygon_points, outline=1, fill=1)
 mask = np.array(mask)
 
 # Calculate the width and height inside the polygon in pixels
-width_pixels = np.sum(mask, axis=0).max() - np.sum(mask, axis=0).min()
-height_pixels = np.sum(mask, axis=1).max() - np.sum(mask, axis=1).min()
+width_pixels = np.sum(mask, axis=1).max() - np.sum(mask, axis=1).min()
+height_pixels = np.sum(mask, axis=0).max() - np.sum(mask, axis=0).min()
 
 # Calculate the resolution in pixels per centimeter
 sensor_size = 1/2.0 * 2.54 # Sensor size in inches to centimiters
-distance = 50 # Distance from the camera to the object in centimeters
+distance = 170 # Distance from the camera to the object in centimeters
 image_width_pixels, image_height_pixels = im.size
 resolution = (sensor_size * distance) / max(image_width_pixels, image_height_pixels)
+#resolution = 0.25344541484716157205240174672489
+print (width_pixels)
+print (height_pixels)
+print (resolution)
 
 # Convert the width and height from pixels to centimeters
-width_cm = width_pixels / resolution
-height_cm = height_pixels / resolution
+width_cm = width_pixels * resolution
+height_cm = height_pixels * resolution
 
 # Display the width and height in centimeters
 print(f"Width inside polygon: {width_cm:.2f} cm")
 print(f"Height inside polygon: {height_cm:.2f} cm")
-
-# Calculate the circumference of the polygon in centimeters
-circumference_cm = 0
-for i in range(len(polygon_points)):
-    x1, y1 = polygon_points[i]
-    x2, y2 = polygon_points[(i + 1) % len(polygon_points)]
-    distance_pixels = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
-    distance_cm = distance_pixels / resolution
-    circumference_cm += distance_cm
-
-# Display the circumference of the polygon in centimeters
-print(f"Circumference of polygon: {circumference_cm:.2f} cm")
 
 # Calculate the distance between each pair of adjacent points in the polygon in centimeters
 distances_cm = []
@@ -100,16 +92,21 @@ for i in range(len(polygon_points)):
     x1, y1 = polygon_points[i]
     x2, y2 = polygon_points[(i + 1) % len(polygon_points)]
     distance_pixels = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
-    distance_cm = distance_pixels / resolution
+    distance_cm = distance_pixels * resolution
     distances_cm.append(distance_cm)
 
 tot_dist_cm = 0
+
 # Display the distances between each pair of adjacent points in the polygon in centimeters
 for i, distance_cm in enumerate(distances_cm):
-    print(f"Distance between points {i} and {i+1}: {distance_cm:.2f} cm")
+    #print(f"Distance between points {i} and {i+1}: {distance_cm:.2f} cm")
     tot_dist_cm = tot_dist_cm + distance_cm
 
 print(f"Total distance between points: {tot_dist_cm:.2f} cm")
+
+# calculate the weight
+weight = -413.36 + (2.69 * (tot_dist_cm * 0.85)) + (1.50 * tot_dist_cm)
+print(f"Weight of the cow: {weight:.2f} Kg")
 
 # Display the image
 im.show()
